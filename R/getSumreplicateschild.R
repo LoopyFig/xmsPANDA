@@ -14,17 +14,17 @@ function(curdata,alignment.tool,numreplicates,rep.max.missing.thresh,method="mea
     {
       # i=samp
       #j=i+numreplicates-1
-      
+
       curdata_int=curdata[r,]
-      
+
       #if(is.na(missing.val)==FALSE){
       #           check_zeros=which(curdata_int==missing.val)
       #           }else{
-      check_zeros=which(is.na(curdata_int)==TRUE)
+      check_zeros=which(all(is.na(curdata_int))==TRUE)
       #           	}
       na_thresh=round(rep.max.missing.thresh*numreplicates)
       
-      
+
       if(length(check_zeros)>na_thresh)
       {
         meanval<-missing.val
@@ -50,20 +50,20 @@ function(curdata,alignment.tool,numreplicates,rep.max.missing.thresh,method="mea
             meanval<-median(t(curdata_int),na.rm=TRUE)
           }
         }
-        
+
       }
       newrow<-cbind(newrow,meanval)
     }
-    
-    
+
+
     finalmat<-rbind(finalmat, newrow)
     return(finalmat)
   })
-  
+
   #colnames(final_set)<-colnames_data
   #rownames(final_set)=NULL
   return(resvec_1)
-  
-  
-  
+
+
+
 }

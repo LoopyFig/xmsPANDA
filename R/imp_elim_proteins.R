@@ -20,14 +20,14 @@ function(nosib.miss, treatment){
     #    pos = miss==0
     pos = miss==min(miss)  # Tom 092510
     present_groups = pr[treatment==unique(treatment)[pos]]
-    
+
     # compute mean and stdev from one of the present groups, make sure no NaNs are used
     pospres = !is.na(present_groups)
     presvals = present_groups[pospres]
     pepmean = mean(presvals)
     pepstd =  sd(presvals)
-    if(is.na(pepstd)) next;
-    
+    if(all(is.na(pepstd))) next;
+
     #% imputing only COMPLETELY missing variables here
     for (j in 1:ng) {
       if   (!pos[j]) { #% imute only the ones not at pos complete
@@ -50,15 +50,15 @@ function(nosib.miss, treatment){
     }
     proteins[i,] = pr
   }
-  
+
   # tom - this routine gives some nearly-blank rows
   # to avoid singularities, i'm going to scan this to see which protein rows
   # have all blanks in one row and remove them
   #  proteins <= proteins
-  xx = (!is.na(proteins)) %*% model.matrix(~treatment-1)
+  xx = (!all(is.na(proteins))) %*% model.matrix(~treatment-1)
   notblank.idx = rep(TRUE, nrow(xx))
   for(jj in 1:ncol(xx)) notblank.idx = notblank.idx & xx[,jj]
   #  proteins = proteins[blank.idx,,drop=FALSE]
-  
+
   return(list(proteins=proteins, notblank.idx=notblank.idx))
 }

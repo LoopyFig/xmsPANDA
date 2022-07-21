@@ -5,7 +5,7 @@ function(xmis, maxiter = 10, ntree = 100, variablewise = FALSE,
                    sampsize = NULL, nodesize = NULL, maxnodes = NULL, xtrue = NA,
                    parallelize = c("no", "variables", "forests"))
 {
-  
+
   n <- nrow(xmis)
   p <- ncol(xmis)
   if (!is.null(classwt))
@@ -69,7 +69,7 @@ function(xmis, maxiter = 10, ntree = 100, variablewise = FALSE,
   NAloc <- is.na(xmis)
   noNAvar <- apply(NAloc, 2, sum)
   sort.j <- order(noNAvar)
-  if (decreasing) 
+  if (decreasing)
     sort.j <- rev(sort.j)
   sort.noNAvar <- noNAvar[sort.j]
   nzsort.j <- sort.j[sort.noNAvar > 0]
@@ -334,6 +334,7 @@ function(xmis, maxiter = 10, ntree = 100, variablewise = FALSE,
       names(OOBerr)[varType == "numeric"] <- "MSE"
       names(OOBerr)[varType == "factor"] <- "PFC"
     }
+    # inefficient
     if (any(!is.na(xtrue))) {
       err <- suppressWarnings(mixError(ximp, xmis, xtrue))
     }
