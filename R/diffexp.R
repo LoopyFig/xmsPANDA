@@ -9,7 +9,7 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
                   cor.method="spearman",networktype=c("complete","GGM"),
                   abs.cor.thresh=0.4,cor.fdrthresh=0.05,kfold=10,
                   pred.eval.method="BER",globalcor=TRUE,
-                  target.metab.file=NA,target.mzmatch.diff=10,target.rtmatch.diff=NA,max.cor.num=100, 
+                  target.metab.file=NA,target.mzmatch.diff=10,target.rtmatch.diff=NA,max.cor.num=100,
                   numtrees=20000,analysismode="classification",net_node_colors=c("green","red"), net_legend=TRUE,network.label.cex=0.6,
                   svm_kernel="radial",
                   heatmap.col.opt="brewer.RdBu",
@@ -42,218 +42,219 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
                   hca.cex.legend=0.7,plot.boxplots.raw=FALSE,vcovHC.type="HC3",ggplot.type1=TRUE,facet.nrow=1,pairwise.correlation.analysis=FALSE,
                   generate.boxplots=TRUE,pvalue.dist.plot=TRUE,...)
 {
-  
+
   options(warn=-1)
   time_start<-Sys.time()
   options(warn=-1)
-  
-  
+
+
   print("**")
   print("**")
-  
+
   suppressMessages(require(parallel))
   num_nodes=detectCores()*0.5
   #print(paste("g is ",group.missing.thresh,sep=""))
-  
-  #if (Sys.getenv("RSTUDIO") == "1" && !nzchar(Sys.getenv("RSTUDIO_TERM")) && 
+
+  #if (Sys.getenv("RSTUDIO") == "1" && !nzchar(Sys.getenv("RSTUDIO_TERM")) &&
    #   Sys.info()["sysname"] == "Darwin" && getRversion() >= "4.0.0") {
     parallel:::setDefaultClusterOptions(setup_strategy = "sequential")
   #}
-  
+
   lme.modeltype=lme.modeltype[1]
-  
+
   if(lme.modeltype=="RI"){
-    
+
     lme.modeltype="lme.RI"
   }else{
     if(lme.modeltype=="RIRS"){
-      
+
       lme.modeltype="lme.RIRS"
     }
-    
+
   }
-  
+
   modeltype=lme.modeltype[1]
   balance.classes.method="ROSE"
 
-  
-  
+
+
   #fixhere
  # color.palette=tolower(color.palette)
  ## color.palette=get_hexcolors_for_palettes(color.palette=color.palette[1],alpha.col=alpha.col[1])
-  
+
   match_col.opt=match(color.palette,c("journal","npg","nejm","jco","lancet","custom1","brewer.RdYlBu","brewer.RdBu","brewer.PuOr","brewer.PRGn","brewer.PiYG","brewer.BrBG",
                                       "brewer.Set2","brewer.Paired","brewer.Dark2","brewer.YlGnBu","brewer.YlGn","brewer.YlOrRd","brewer.YlOrBr","brewer.PuBuGn",
                                       "brewer.PuRd","brewer.PuBu",
                                       "brewer.OrRd","brewer.GnBu","brewer.BuPu","brewer.BuGn","brewer.blues","black","grey65","terrain","rainbow","heat","topo"))
-  
-  
+
+
   match_col.opt=length(which(is.na(match_col.opt)==TRUE))
-  
+
   #all colors match
   if(length(match_col.opt)<1){
-    
+
     color.palette=color.palette[1]
   }else{
-    
+
     if(length(grep(color.palette,pattern="brewer."))>1){
-      
+
       color.palette=color.palette[1]
     }
   }
-  
+
   color.palette=get_hexcolors_for_palettes(color.palette=color.palette,alpha.col=alpha.col[1])
-  
+
   #color.palette=get_hexcolors_for_palettes(color.palette=color.palette,alpha.col=alpha.col[1])
-  
-  
+
+
   limma.contrasts.type=limma.contrasts.type[1]
   outlier.method=outlier.method[1]
   lineplot.lty.option=lineplot.lty.option[1]
   networktype=networktype[1]
+  normalization.method=normalization.method[1]
   differential.network.analysis.method=c("degree.centrality")
   differential.network.analysis.method=differential.network.analysis.method[1] #"st5.differential.correlation"
-  
+
   boxplot.col.opt=color.palette
   barplot.col.opt=color.palette
   sample.col.opt=color.palette
   lineplot.col.opt=color.palette
   scatterplot.col.opt=color.palette
   individualsampleplot.col.opt=color.palette
-  
+
   if(length(grep(heatmap.col.opt,pattern = "brewer."))>0){
-    
+
     heatmap.col.opt<-gsub(heatmap.col.opt,pattern="brewer.",replacement="")
   }
-  
+
   labRow.value=hca.labRow.value
   labCol.value=hca.labCol.value
-  
+
   if(is.na(parentoutput_dir)==TRUE){
-    
+
     parentoutput_dir=getwd()
   }
-  
-  if(is.na(Xmat)==FALSE){
-    
+
+  if(all(is.na(Xmat))==FALSE){
+
     feature_table_file=NA
   }
-  if(is.na(Ymat)==FALSE){
-    
+  if(all(is.na(Ymat))==FALSE){
+
     class_labels_file=NA
   }
   if(differential.network.analysis==TRUE){
-    
-    
-    
+
+
+
     degree_rank_method="diffrank"
-    
+
   }else{
     degree_rank_method="none"
   }
-  
-  
-  
+
+
+
   feat.filt.thresh=NA
   feat_weight=1
   samplermindex=NA
   #pcacenter=TRUE
   #pcascale=TRUE
   alphacol=0.3
-  
-  
+
+
  # print(parentoutput_dir)
   dir.create(parentoutput_dir,showWarnings = FALSE)
-  
-  
+
+
   # print(is(group.missing.thresh<0.8))
-  
+
   if(is.na(group.missing.thresh)==FALSE){
     if(group.missing.thresh<0.8){
-      
-      
-   
-      
+
+
+
+
     }
   }
   options(warn=-1)
-  
+
   if(input.intensity.scale=="raw" || input.intensity.scale=="log2"){
-    
+
     print("##################################################################################")
     cat("The order of samples should be the same in the feature table and classlabels files",sep="\n")
     cat(paste("Treating input intensities as ",input.intensity.scale," values",sep=""),sep="\n")
-    
+
   }else{
-    
+
     stop("Input intensities should either be at raw or log2 scale")
   }
-  
+
   suppressMessages(suppressWarnings(try(sink(file=NULL),silent=TRUE)))
   #suppressMessages(suppressWarnings(sink(file=NULL)))
   x<-date()
   x<-strsplit(x,split=" ")
-  
+
   #x<-gsub(x,pattern=":",replacement="_")
   targeted_feat_raw<-{}
   logistic_reg=FALSE
   x1<-unlist(x)
   x1<-gsub(x1,pattern=":",replacement="_")
   #fname<-paste(x1[2:5],collapse="_")
-  
+
   #fname<-paste(x1[2:3],x1[5],x1[4],collapse="_")
-  
+
   fname<-paste(x1[2:3],collapse="")
-  
+
   #fname<-paste(fname,x1[6],sep="")
   x1[4]<-gsub(x1[4],pattern=":",replacement="_")
   fname<-paste(fname,x1[5],sep="")
   fname<-paste(fname,x1[4],sep="_")
-  
-  
+
+
   suppressWarnings(dir.create(parentoutput_dir,showWarnings = FALSE))
   setwd(parentoutput_dir)
-  
-  
+
+
   #fname<-paste(parentoutput_dir,"/Log",fname,".txt",sep="")
-  
+
   fname<-paste(parentoutput_dir,"/Log.txt",sep="")
-  
-  
+
+
   if(is.na(foldchangethresh)==FALSE){
     if(log2transform==TRUE && znormtransform==TRUE){
-      
+
       stop("Both log2transform and znormtransform can not be true if foldchangethresh is not equal to NA.")
     }
   }
-  
+
   if(featselmethod[1]=="limma2way")
   {
-    
+
     #cat("Note: lm2wayanova option is recommended for greater than 2x2 designs and this includes post-hoc comparisons",sep="\n")
-    
-    
+
+
   }
-  
-  
+
+
   if(featselmethod[1]=="lm1wayanovarepeat" | featselmethod[1]=="spls1wayrepeat" | featselmethod[1]=="limma1wayrepeat")
   {
     cat("Class labels format should be: Sample ID, Subject, Time. lm1wayanovarepeat is based on the nlme::lme() function with post-hoc Tukey HSD test.",sep="\n")
   }else{
-    
+
     if(featselmethod[1]=="lm2wayanovarepeat" | featselmethod[1]=="spls2wayrepeat" | featselmethod[1]=="limma2wayrepeat")
     {
       cat("Class labels format should be: Sample ID, Subject, Factor, Time. lm2wayanovarepeat is based on the nlme::lme() funciton with post-hoc Tukey HSD test. ",sep="\n")
     }
-    
+
   }
-  
-  
+
+
   print("##############################Starting processing now################################")
   print(paste("**Program is running. Please check the logfile for runtime status: ",fname,"**",sep=""))
-  
 
-  
+
+
   fname_params<-paste(parentoutput_dir,"/InputParameters.csv",sep="")
   #sink(fname_params)
   # ###savelist=ls(),file="cur.Rda")
@@ -264,7 +265,7 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
   c2<-rbind(c2,parentoutput_dir)
   c1<-rbind(c1,"class_labels_file:")
   c2<-rbind(c2,class_labels_file)
-  
+
   c1<-rbind(c1,"num_replicates:")
   c2<-rbind(c2,num_replicates)
   c1<-rbind(c1,"summarize.replicates:")
@@ -281,11 +282,11 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
   c2<-rbind(c2,group.missing.thresh)
   c1<-rbind(c1,"input.intensity.scale:")
   c2<-rbind(c2,input.intensity.scale)
-  
+
   c1<-rbind(c1,"normalization.method:")
   c2<-rbind(c2,normalization.method)
-  
-  
+
+
   c1<-rbind(c1,"log2transform:")
   c2<-rbind(c2,log2transform)
   c1<-rbind(c1,"medcenter:")
@@ -294,23 +295,23 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
   c2<-rbind(c2,znormtransform)
   c1<-rbind(c1,"quantile_norm:")
   c2<-rbind(c2,quantile_norm)
-  
-  
+
+
   c1<-rbind(c1,"TIC_norm:")
   c2<-rbind(c2,TIC_norm)
   c1<-rbind(c1,"lowess_norm:")
   c2<-rbind(c2,lowess_norm)
   c1<-rbind(c1,"madscaling:")
   c2<-rbind(c2,madscaling)
-  
+
   c1<-rbind(c1,"rsd.filt.list:")
   c2<-rbind(c2,rsd.filt.list)
   c1<-rbind(c1,"pairedanalysis:")
   c2<-rbind(c2,pairedanalysis)
   c1<-rbind(c1,"featselmethod:")
-  
+
   c2<-rbind(c2,paste(featselmethod,collapse=";"))
-  
+
   c1<-rbind(c1,"pvalue.thresh:")
   c2<-rbind(c2,pvalue.thresh)
   c1<-rbind(c1,"fdrthresh:")
@@ -355,10 +356,10 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
   c2<-rbind(c2,paste(manhattanplot.col.opt,collapse=";"))
   c1<-rbind(c1,"boxplot.col.opt:")
   c2<-rbind(c2,boxplot.col.opt)
-  
+
   c1<-rbind(c1,"barplot.col.opt:")
   c2<-rbind(c2,barplot.col.opt)
-  
+
   c1<-rbind(c1,"sample.col.opt:")
   c2<-rbind(c2,sample.col.opt)
   c1<-rbind(c1,"alphacol:")
@@ -375,13 +376,13 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
   c2<-rbind(c2,pcacenter)
   c1<-rbind(c1,"pcascale:")
   c2<-rbind(c2,pcascale)
-  
+
   c1<-rbind(c1,"pred.eval.method:")
   c2<-rbind(c2,pred.eval.method)
-  
+
   c1<-rbind(c1,"rocfeatlist:")
   c2<-rbind(c2,paste(rocfeatlist,collapse=";"))
-  
+
   c1<-rbind(c1,"rocfeatincrement:")
   c2<-rbind(c2,rocfeatincrement)
   c1<-rbind(c1,"rocclassifier:")
@@ -436,62 +437,62 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
   c2<-rbind(c2,error.bar)
   c1<-rbind(c1,"timeseries.lineplots")
   c2<-rbind(c2,timeseries.lineplots)
-  
+
   c1<-rbind(c1,"alphabetical.order")
   c2<-rbind(c2,alphabetical.order)
-  
- 
+
+
   c1<-rbind(c1,"kegg_species_code")
   c2<-rbind(c2,kegg_species_code)
-  
+
   c1<-rbind(c1,"database")
   c2<-rbind(c2,database)
-  
+
   c1<-rbind(c1,"reference_set")
   c2<-rbind(c2,reference_set)
-  
+
   c1<-rbind(c1,"target.data.annot")
   c2<-rbind(c2,target.data.annot)
-  
+
   c1<-rbind(c1,"add.pvalues")
   c2<-rbind(c2,add.pvalues)
-  
+
   c1<-rbind(c1,"add.jitter")
   c2<-rbind(c2,add.jitter)
-  
+
   c1<-rbind(c1,"fcs.permutation.type")
   c2<-rbind(c2,fcs.permutation.type)
-  
+
   c1<-rbind(c1,"fcs.method")
   c2<-rbind(c2,fcs.method)
-  
+
   c1<-rbind(c1,"fcs.min.hits")
   c2<-rbind(c2,fcs.min.hits)
-  
+
   c1<-rbind(c1,"names_with_mz_time")
   c2<-rbind(c2,names_with_mz_time)
-  
+
   c1<-rbind(c1,"ylab_text")
   c2<-rbind(c2,ylab_text)
-  
+
   c1<-rbind(c1,"xlab_text")
   c2<-rbind(c2,xlab_text)
- 
+
   c1<-rbind(c1,"boxplot.type")
   c2<-rbind(c2,boxplot.type)
-  
+
   c1<-rbind(c1,"samplermindex")
   c2<-rbind(c2,samplermindex)
-  
+
   c1<-rbind(c1,"differential.network.analysis")
   c2<-rbind(c2,differential.network.analysis)
-  
+
   c1<-rbind(c1,"degree.centrality.method")
   c2<-rbind(c2,degree.centrality.method)
-  
+
   c1<-rbind(c1,"log2.transform.constant")
   c2<-rbind(c2,log2.transform.constant)
-  
+
 
   c1<-rbind(c1,"balance.classes")
   c2<-rbind(c2,balance.classes)
@@ -499,119 +500,119 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
   c2<-rbind(c2,balance.classes.sizefactor)
   c1<-rbind(c1,"balance.classes.seed")
   c2<-rbind(c2,balance.classes.seed)
-  
+
   c1<-rbind(c1,"cv.perm.count")
   c2<-rbind(c2,cv.perm.count)
-  
+
   c1<-rbind(c1,"multiple.figures.perpanel")
   c2<-rbind(c2,multiple.figures.perpanel)
-  
+
   c1<-rbind(c1,"hca.labRow.value")
   c2<-rbind(c2,hca.labRow.value)
-  
+
   c1<-rbind(c1,"hca.labCol.value")
   c2<-rbind(c2,hca.labCol.value)
-  
-  
+
+
   c1<-rbind(c1,"alpha.col")
   c2<-rbind(c2,alpha.col)
-  
+
   c1<-rbind(c1,"similarity.matrix")
   c2<-rbind(c2,similarity.matrix)
- 
+
   c1<-rbind(c1,"outlier.method")
   c2<-rbind(c2,outlier.method)
-  
+
   c1<-rbind(c1,"removeRda")
   c2<-rbind(c2,removeRda)
-  
+
   c1<-rbind(c1,"color.palette")
   c2<-rbind(c2,color.palette)
-  
+
   c1<-rbind(c1,"plot_DiNa_graph")
   c2<-rbind(c2,plot_DiNa_graph)
-  
+
   c1<-rbind(c1,"limma.contrasts.type")
   c2<-rbind(c2,limma.contrasts.type)
-  
+
   c1<-rbind(c1,"hca.cex.legend")
   c2<-rbind(c2,hca.cex.legend)
-  
+
 
   c1<-rbind(c1,"differential.network.analysis.method")
   c2<-rbind(c2,differential.network.analysis.method)
- 
+
   c1<-rbind(c1,"plot.boxplots.raw")
   c2<-rbind(c2,plot.boxplots.raw)
-  
+
   c1<-rbind(c1,"facet.nrow")
   c2<-rbind(c2,facet.nrow)
-  
+
 
   c1<-cbind(c1,c2)
   c1<-as.data.frame(c1)
-  
+
   colnames(c1)<-c("InputParameter:","Value")
   write.csv(c1,file=fname_params,row.names=FALSE)
   rm(c1)
-  
-  
-  
-  
+
+
+
+
   sink(fname)
   print(sessionInfo())
   analysistype="oneway"
-  
+
   if(featselmethod=="limma2way" | featselmethod=="lm2wayanova" | featselmethod=="spls2way"){
     analysistype="twowayanova"
   }else{
-    
+
     if(featselmethod=="limma2wayrepeat" | featselmethod=="lm2wayanovarepeat" | featselmethod=="spls2wayrepeat"){
       analysistype="twowayrepeat"
       pairedanalysis=TRUE
     }else{
-      
+
       if(featselmethod=="limma1wayrepeat" | featselmethod=="lm1wayanovarepeat" | featselmethod=="spls1wayrepeat"){
         analysistype="onewayrepeat"
         pairedanalysis=TRUE
       }
-      
+
     }
-    
+
   }
-  
+
   if(length(featselmethod)>1){
-    
+
     if(length(rsd.filt.list)>1){
-      
+
       print("Warning: only one RSD threshold allowed for multiple feature selection methods. Only the first RSD threshold will be used.")
       rsd.filt.list=rsd.filt.list[1]
-      
+
     }
-    
+
     consensus_res<-{}
     diffexp.res<-new("list")
     consensus_analysis=TRUE
     ranked_list<-{}
     common_feats<-{}
-    
+
     pass_method_list<-{}
-    
+
     for(i in 1:length(featselmethod))
     {
-      
+
       if(featselmethod[i]=="rfesvm" && analysismode=="regression"){
         try(dev.off(),silent=TRUE)
         next;
       }
-      
+
       outloc<-paste(parentoutput_dir,featselmethod[i],sep="/")
-    
+
       #suppressWarnings(
         diffexp.res[[i]]<-diffexp.child(Xmat,Ymat,feature_table_file,parentoutput_dir,class_labels_file,num_replicates,feat.filt.thresh,summarize.replicates,summary.method,summary.na.replacement,missing.val,rep.max.missing.thresh,
                                                            all.missing.thresh,group.missing.thresh,input.intensity.scale,
                                                            log2transform,medcenter,znormtransform,quantile_norm,lowess_norm,madscaling,TIC_norm,rangescaling,mstus,paretoscaling,sva_norm,eigenms_norm,vsn_norm,
-                                                           normalization.method[1],rsd.filt.list,
+                                                           normalization.method,rsd.filt.list,
                                                            pairedanalysis,featselmethod[i],fdrthresh,fdrmethod,cor.method,networktype,network.label.cex,abs.cor.thresh,cor.fdrthresh,kfold,pred.eval.method,feat_weight,globalcor,
                                                            target.metab.file,target.mzmatch.diff,target.rtmatch.diff,max.cor.num,samplermindex,pcacenter,pcascale,
                                                            numtrees,analysismode,net_node_colors,net_legend,svm_kernel,heatmap.col.opt,manhattanplot.col.opt,boxplot.col.opt,barplot.col.opt,sample.col.opt,lineplot.col.opt, scatterplot.col.opt,hca_type,alphacol,pls_vip_thresh,num_nodes,max_varsel, pls_ncomp=pls_ncomp,pca.stage2.eval=pca.stage2.eval,scoreplot_legend=scoreplot_legend,pca.global.eval=pca.global.eval,
@@ -625,7 +626,7 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
                                                            balance.classes=balance.classes,balance.classes.sizefactor=balance.classes.sizefactor,
                                                            balance.classes.method=balance.classes.method,balance.classes.seed=balance.classes.seed,
                                                            cv.perm.count=cv.perm.count,
-                                     multiple.figures.perpanel=multiple.figures.perpanel,labRow.value = labRow.value, 
+                                     multiple.figures.perpanel=multiple.figures.perpanel,labRow.value = labRow.value,
                                      labCol.value = labCol.value,alpha.col=alpha.col,
                                      similarity.matrix=similarity.matrix,outlier.method=outlier.method[1],removeRda=removeRda,color.palette=color.palette,plot_DiNa_graph=plot_DiNa_graph,
                                      limma.contrasts.type=limma.contrasts.type,hca.cex.legend=hca.cex.legend,
@@ -633,254 +634,254 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
                                      ggplot.type1=ggplot.type1,facet.nrow=facet.nrow,pairwise.correlation.analysis=pairwise.correlation.analysis,
                                      generate.boxplots=generate.boxplots,pvalue.dist.plot=pvalue.dist.plot)
                                      #,silent=TRUE)
-        
-                                             
-                                             
-      
+
+
+
+
       if(is(diffexp.res[[i]],"try-error")){
         print(paste("Error processing option ",featselmethod[i],sep=""))
         print(paste("Error message: ",diffexp.res[[i]],sep=""))
-        
+
         #diffexp.res[[i]]<-
-        
-        
-        
+
+
+
       }else{
         pass_method_list<-c(pass_method_list,i)
        # print(paste("Done with ",featselmethod[i],sep=""))
       }
-      
+
       fname_del<-paste(outloc,"/Rplots.pdf",sep="")
       try(unlink(fname_del),silent=TRUE)
-      
+
     }
-    
+
     ##save(diffexp.res,featselmethod,file="diffexp.res.Rda")
-    
+
     max_num_feats<-max(c(unlist(lapply(1:length(diffexp.res),function(j){
-      
+
       if(j%in%pass_method_list){
         return(dim(diffexp.res[[j]]$all_metabs)[1])
       }
-      
+
     }
     ))),0)
-    
+
     if(max_num_feats<1){
-      
+
       return("No features selected.")
     }
-    
+
     sel_feat_matrix<-matrix(0,nrow=max_num_feats,ncol=length(featselmethod))
-    
+
     feat_rank_matrix<-matrix(1,nrow=max_num_feats,ncol=length(featselmethod))
-    
+
     ranked_list<-{}
-    
+
     for(i in 1:length(featselmethod))
     {
       if(is.na(aggregation.method)==TRUE){
         consensus_analysis=FALSE
       }else{
-        
+
         if(aggregation.method=="none"){
           consensus_analysis=FALSE
         }else{
           if(aggregation.method=="consensus"){
-            
+
             consensus_analysis=TRUE
-            
+
           }
-          
+
         }
       }
       if(length(diffexp.res[[i]]$all_metabs)>0 && consensus_analysis==TRUE){
-        
+
         tvec=diffexp.res[[i]]$all_metabs$diffexp_rank
-        
+
         if(length(tvec)<1){
-          
+
           try(dev.off(),silent=TRUE)
           next;
         }
         cur_data_res<-diffexp.res[[i]]$all_metabs
-        
+
         diffexp.res[[i]]$all_metabs<-diffexp.res[[i]]$all_metabs[order(diffexp.res[[i]]$all_metabs$mz),]
         mz_rt_all<-paste(diffexp.res[[i]]$all_metabs$mz,"_",diffexp.res[[i]]$all_metabs$time,sep="")
         mz_rt_selected<-paste(diffexp.res[[i]]$diffexp_metabs$mz,"_",diffexp.res[[i]]$diffexp_metabs$time,sep="")
-        
-        
+
+
         sel_feat_matrix[which(mz_rt_all%in%mz_rt_selected),i]<-1
-        
+
         rownames(sel_feat_matrix)<-mz_rt_all
-        
+
         if(i==1){
-          
+
           #sort(rankingCriteria, index.return = TRUE)$ix
           ranked_indices=sort(tvec,index.return=TRUE)$ix
           ranked_list<-mz_rt_all[ranked_indices]
-          
+
         }
         if(i>1){
-          
+
           if(length(ranked_list)>0){
-            
+
             ranked_list<-rbind(ranked_list,mz_rt_all[sort(tvec,index.return=TRUE)$ix])
           }else{
-            
+
             ranked_indices=sort(tvec,index.return=TRUE)$ix
             ranked_list<-mz_rt_all[ranked_indices]
           }
-          
-          
+
+
         }
       }
     }
-    
+
     ###save(sel_feat_matrix,file="feature.selection.different.methods.Rda")
     ###save(ranked_list,file="ranked_list.Rda")
-    
+
     if(length(ranked_list)<1){
       consensus_analysis=FALSE
-      
+
     }
-    
+
     if(consensus_analysis==TRUE){
-      
+
       print("################")
       print(paste("Aggregating results from different methods using ",aggregation.method," aggregation method.",sep=""))
-      
-      
-      
+
+
+
       print("################")
-      
+
       if(aggregation.method=="RankAggreg" | aggregation.method=="RankAggregGA"){
-        
+
         if(max_varsel>dim(ranked_list)[2]){
           max_varsel=round(dim(ranked_list)[2]*0.3)
-          
-          
+
+
         }
-        
+
         if(aggregation.method=="RankAggreg"){
           r1<-RankAggreg(x=ranked_list,k=max_varsel,verbose=TRUE,distance="Spearman",method="CE",maxIter=aggregation.max.iter)
         }else{
-          
+
           r1<-RankAggreg(x=ranked_list,k=max_varsel,verbose=TRUE,distance="Spearman",method="GA",maxIter=aggregation.max.iter)
         }
-        
+
         common_row_index<-which(mz_rt_all%in%r1$top.list)
-        
-        
+
+
         common_feats<-cur_data_res[common_row_index,]
-        
+
         cnamesd1<-colnames(common_feats)
         time_ind<-which(cnamesd1=="time")
         mz_ind<-which(cnamesd1=="mz")
-        
-        
+
+
       }else{
-        
+
         if(length(featselmethod)>=1){
-          
+
           check_sel_status<-apply(sel_feat_matrix,1,sum)
-          
+
           common_row_index<-which(check_sel_status==length(featselmethod))
           if(length(common_row_index)>0){
             common_feats<-cur_data_res[common_row_index,]
           }else{
-            
+
             print("No features selected by all methods.")
           }
         }
-        
-        
+
+
       }
-      
+
       cnames_1<-try(colnames(common_feats),silent=TRUE)
-      
-      
+
+
       if(consensus_analysis==FALSE | is(cnames_1,"try-error") | length(common_feats)<1){
-        
+
         print("Skipping aggregation.")
       }else{
-        
-        
+
+
         bad_colind<-grep(tolower(cnames_1),pattern="rank")
-        
+
         bad_colind_2<-grep(tolower(cnames_1),pattern="fold.change.log2")
-        
+
         if(length(bad_colind_2)>1){
           bad_colind_2<-bad_colind_2[-c(1)]
         }
-        
+
         bad_colind<-c(bad_colind,bad_colind_2)
-        
-        
+
+
         if(nrow(common_feats)>0){
-          
+
           if(length(bad_colind)>0){
             common_feats<-common_feats[,-c(bad_colind)]
           }
         }
-        
-        
+
+
         common_feats<-unique(common_feats)
         print("Dimension of aggregated feature table of selected features:")
         print(dim(common_feats))
-        
+
         num_common_feats<-dim(common_feats)[1]
-        
+
         if(num_common_feats<1){
-          
+
           stop("No common features found.")
         }
         ####savecommon_feats,file="common_feats.Rda")
-        
-        
+
+
         cnamesd1<-colnames(common_feats)
         time_ind<-which(cnamesd1=="time")
         mz_ind<-which(cnamesd1=="mz")
-        
-        
+
+
         #Xmat<-common_feats[,-c(1:2)]
         mz<-common_feats[,mz_ind]
         time<-common_feats[,time_ind]
         rnames1<-paste(mz,time,sep="_")
-        
+
         Xmat<-cbind(mz,time,common_feats[,-c(1:time_ind)])
-        
+
         rownames(Xmat)<-rnames1
-        
+
         if(max_varsel>nrow(Xmat)){
-          
+
           max_varsel<-nrow(Xmat)
         }
-        
+
         #Ymat<-cbind(colnames(demetabs_res$norm_data[,-c(1:2)]),diffexp.res[i]$classlabels)
         Ymat<-diffexp.res[[i]]$classlabels
-        
-        
+
+
         outloc<-paste(parentoutput_dir,"AggregatedResults/",sep="/")
-        
+
         if(log2transform==TRUE){
-          
+
           input.intensity.scale="log2"
         }else{
           input.intensity.scale="raw"
         }
-        
+
         suppressWarnings(dir.create(outloc,showWarnings = FALSE))
         setwd(outloc)
-        
+
         dir.create("Tables",showWarnings = FALSE)
-        
+
         write.table(Xmat,file="Tables/Aggregated_selected_features.txt",sep="\t",row.names=FALSE)
-        
+
         if(nrow(Xmat)>2){
-          
+
           dir.create("Figures",showWarnings = FALSE)
-          
+
           subdata<-t(Xmat[,-c(1:2)])
           classlabels<-Ymat[,2]
           classlabels<-as.data.frame(classlabels)
@@ -888,28 +889,28 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
             svm_model<-try(svm_cv(v=kfold,x=subdata,y=classlabels,kname=svm_kernel,errortype=pred.eval.method,conflevel=95,match_class_dist=match_class_dist),silent=TRUE)
             #
             #svm_model<-svm_cv(v=kfold,x=subdata,y=classlabels,kname=svm_kernel,errortype=pred.eval.method,conflevel=95,match_class_dist=match_class_dist)
-            
-            
+
+
             if(is(svm_model,"try-error")){
               kfold_acc<-NA
-              
+
             }else{
               kfold_acc<-svm_model$avg_acc
             }
           }else{
-            
+
             svm_model_reg<-try(svm(x=subdata,y=(classlabels[,1]),type="eps",cross=kfold),silent=TRUE)
-            
+
             if(is(svm_model_reg,"try-error")){
               kfold_acc<-NA
-              
+
             }else{
-              
+
               kfold_acc<-svm_model_reg$tot.MSE
             }
           }
           numcores<-num_nodes #round(detectCores()*0.6)
-          
+
           kfold_acc_rand<-{}
           #for(p1 in 1:100){
           cl <- parallel::makeCluster(getOption("cl.cores", num_nodes))
@@ -921,13 +922,13 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
          # clusterExport(cl,"svm",envir = .GlobalEnv)
           if(analysismode=="classification"){
             kfold_acc_rand<-parLapply(cl,1:100,function(p1){
-              
+
               sample_ind<-sample(1:dim(classlabels)[1],size=dim(classlabels)[1])
               classlabels_rand<-classlabels[sample_ind,]
               classlabels_rand<-as.data.frame(classlabels_rand)
               svm_model<-try(svm_cv(v=kfold,x=subdata,y=classlabels_rand,kname=svm_kernel,errortype=pred.eval.method,conflevel=95,match_class_dist=match_class_dist),silent=TRUE)
               #
-              
+
               if(is(svm_model,"try-error")){
                 # kfold_acc_rand<-c(kfold_acc_rand,NA)
                 return(NA)
@@ -936,17 +937,17 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
                 return(svm_model$avg_acc)
               }
             })
-            
+
           }else{
-            
+
             kfold_acc_rand<-parLapply(cl,1:100,function(p1){
-              
+
               sample_ind<-sample(1:dim(classlabels)[1],size=dim(classlabels)[1])
               classlabels_rand<-classlabels[sample_ind,]
               classlabels_rand<-as.data.frame(classlabels_rand)
-              
+
               svm_model_reg<-try(svm(x=subdata,y=(classlabels[,1]),type="eps",cross=kfold),silent=TRUE)
-              
+
               if(is(svm_model_reg,"try-error")){
                 # kfold_acc_rand<-c(kfold_acc_rand,NA)
                 return(NA)
@@ -957,154 +958,154 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
             })
           }
           stopCluster(cl)
-          
+
           kfold_acc_rand<-unlist(kfold_acc_rand)
-          
+
           kfold_acc_rand<-mean(kfold_acc_rand,na.rm=TRUE)
-          
+
           num_common_feats<-dim(common_feats)[1]
           summary_res<-cbind(num_common_feats,kfold_acc,kfold_acc_rand)
           colnames(summary_res)<-c("Number of selected features after aggregation",paste(pred.eval.method,"-accuracy",sep=""),paste(pred.eval.method," permuted accuracy",sep=""))
-          
-          
+
+
           file_name<-paste("../Results_summary_aggregated.txt",sep="")
           write.table(summary_res,file=file_name,sep="\t",row.names=FALSE)
-          
+
           if(output.device.type=="pdf"){
             pdf("Figures/Aggregatedresults.pdf")
           }
-          
+
           if(output.device.type!="pdf"){
-            
+
             temp_filename_1<-"Figures/HCA_aggregated_selectedfeats.png"
-            
+
             png(temp_filename_1,width=plots.width,height=plots.height,res=plots.res,type=plots.type,units="in")
           }
-          
+
           #   print("here")
           #print(head(Ymat))
           ####saveXmat,file="Xmat.Rda")
           ####saveYmat,file="Ymat.Rda")
-          
+
           g1<-try(get_hca(feature_table_file=NA,parentoutput_dir=outloc,class_labels_file=NA,X=Xmat,Y=Ymat,heatmap.col.opt=heatmap.col.opt,cor.method=cor.method,is.data.znorm=FALSE,analysismode=analysismode,
                       sample.col.opt=sample.col.opt,plots.width=plots.width,plots.height=plots.height,plots.res=plots.res, plots.type=plots.type, alphacol=0.3, hca_type=hca_type,newdevice=FALSE,
                       input.type="intensity",mainlab="",alphabetical.order=alphabetical.order,study.design=analysistype,similarity.matrix=similarity.matrix,
                       cexRow=cex.plots,cexCol=cex.plots),silent=TRUE)
-          
-          
+
+
           if(output.device.type!="pdf"){
-            
+
             try(dev.off(),silent=TRUE)
           }
-          
-          
+
+
           if(analysismode=="classification")
           {
             best_subset<-{}
             best_acc<-0
-            
+
             xvec<-{}
             yvec<-{}
             for(i in 2:max_varsel){
-              
+
               subdata<-t(Xmat[1:i,-c(1:2)])
               svm_model<-try(svm_cv(v=kfold,x=subdata,y=classlabels,kname=svm_kernel,errortype=pred.eval.method,conflevel=95,match_class_dist=match_class_dist),silent=TRUE)
               #svm_model<-svm_cv(v=kfold,x=subdata,y=classlabels,kname=svm_kernel,errortype=pred.eval.method,conflevel=95
-              
+
               if(is(svm_model,"try-error")){
-                
+
                 svm_model<-NA
-                
+
               }else{
-                
+
                 xvec<-c(xvec,i)
                 yvec<-c(yvec,svm_model$avg_acc)
                 if(svm_model$avg_acc>best_acc){
-                  
+
                   best_acc<-svm_model$avg_acc
                   best_subset<-seq(1,i)
-                  
-                  
+
+
                 }
-                
+
                 if(svm_model$avg_acc<best_acc){
-                  
+
                   diff_acc<-best_acc-svm_model$avg_acc
                   if(diff_acc>50){
-                    
+
                     break;
-                    
+
                   }
-                  
+
                 }
               }
-              
-              
+
+
             }
-            
+
             if(pred.eval.method=="CV"){
               ylab_text=paste(pred.eval.method," accuracy (%)",sep="")
-              
+
             }else{
               if(pred.eval.method=="BER"){
                 ylab_text=paste("Balanced accuracy"," (%)",sep="")
               }else{
-                
+
                 ylab_text=paste("AUC"," (%)",sep="")
               }
             }
-            
-            
+
+
             if(length(yvec)>0){
-              
+
               msg1<-paste("k-fold CV classification accuracy based on forward selection of\n aggregated features ordered by ",featselmethod[1],sep="")
-              
-              
+
+
               if(output.device.type!="pdf"){
-                
+
                 temp_filename_1<-"Figures/kfold_forward_selection_aggregated_selectedfeats.png"
-                
+
                 png(temp_filename_1,width=plots.width,height=plots.height,res=plots.res,type=plots.type,units="in")
               }
-              
-              
+
+
               plot(x=xvec,y=yvec,main=msg1,xlab="Feature index",ylab=ylab_text,type="b",col="brown")
-              
-              
+
+
               if(output.device.type!="pdf"){
-                
+
                 try(dev.off(),silent=TRUE)
               }
-              
-              
+
+
               cv_mat<-cbind(xvec,yvec)
               colnames(cv_mat)<-c("Feature Index",ylab_text)
-              
+
               write.table(cv_mat,file="Tables/aggregated_kfold_cv_mat.txt",sep="\t")
             }
-            
-            
-            
+
+
+
             if(output.device.type!="pdf"){
-              
+
               temp_filename_1<-"Figures/Boxplots_aggregated_selectedfeats.png"
-              
+
               #png(temp_filename_1,width=plots.width,height=plots.height,res=plots.res,type=plots.type,units="in")
               #pdf(temp_filename_1)
               pdf(temp_filename_1,width=plots.width,height=plots.height)
-              
+
             }
-            
+
             if(log2transform==TRUE || input.intensity.scale=="log2"){
-              
+
               if(znormtransform==TRUE){
                 ylab_text_2="scale normalized"
               }else{
                 if(quantile_norm==TRUE){
-                  
+
                   ylab_text_2="quantile normalized"
                 }else{
-                  
+
                   ylab_text_2=""
                 }
               }
@@ -1114,7 +1115,7 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
                 ylab_text_2="scale normalized"
               }else{
                 if(quantile_norm==TRUE){
-                  
+
                   ylab_text_2="quantile normalized"
                 }else{
                   ylab_text_2=""
@@ -1122,92 +1123,92 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
               }
               ylab_text=paste("Raw intensity ",ylab_text_2,sep="")
             }
-            
-            
-            
+
+
+
             # par(mfrow=c(2,2))
             par(mfrow=c(1,1),family="sans",cex=cex.plots)
             get_boxplots(X=Xmat,Y=Ymat,parentoutput_dir=outloc,sample.col.opt=sample.col.opt,
                          boxplot.col.opt=boxplot.col.opt, newdevice=FALSE,
                          cex.plots=cex.plots,ylabel=ylab_text,alphabetical.order=alphabetical.order,
                          boxplot.type=boxplot.type,study.design=analysistype,multiple.figures.perpanel=multiple.figures.perpanel,ggplot.type1=ggplot.type1,facet.nrow=facet.nrow)
-            
-            
-            
+
+
+
             if(output.device.type!="pdf"){
-              
+
               try(dev.off(),silent=TRUE)
             }
-            
-            
-            
+
+
+
             if(output.device.type!="pdf"){
-              
+
               temp_filename_1<-"Figures/Barplots_aggregated_selectedfeats.pdf"
-              
+
               #png(temp_filename_1,width=plots.width,height=plots.height,res=plots.res,type=plots.type,units="in")
               #pdf(temp_filename_1)
-              
+
               pdf(temp_filename_1,width=plots.width,height=plots.height)
-              
+
             }
             # par(mfrow=c(2,2))
-            
-            
-            
+
+
+
             par(mfrow=c(1,1),family="sans",cex=cex.plots)
-            
+
             get_barplots(feature_table_file=NA,class_labels_file=NA,X=Xmat,Y=Ymat,parentoutput_dir=outloc,newdevice=FALSE,ylabel=ylab_text,cex.plots=cex.plots,barplot.col.opt=barplot.col.opt,error.bar=error.bar,barplot.xaxis=barplot.xaxis,study.design=analysistype)
-            
+
             if(output.device.type!="pdf"){
-              
+
               try(dev.off(),silent=TRUE)
             }
-           
-            if(FALSE){ 
-            
+
+            if(FALSE){
+
             if(output.device.type!="pdf"){
-              
+
               temp_filename_1<-"Figures/Individual_sample_plots_aggregated_selectedfeats.png"
-              
+
               #png(temp_filename_1,width=plots.width,height=plots.height,res=plots.res,type=plots.type,units="in")
               #pdf(temp_filename_1)
-              
+
               pdf(temp_filename_1,width=plots.width,height=plots.height)
             }
-            
+
             par(mfrow=c(1,1),family="sans",cex=cex.plots)
             get_individualsampleplots(feature_table_file=NA,class_labels_file=NA,X=Xmat,Y=Ymat,parentoutput_dir=outloc,newdevice=FALSE,
                                       ylabel=ylab_text,cex.plots=cex.plots,sample.col.opt=individualsampleplot.col.opt)
-            
-            
+
+
             if(output.device.type!="pdf"){
-              
+
               try(dev.off(),silent=TRUE)
             }
           }
-            
+
             if(pairedanalysis==TRUE || timeseries.lineplots==TRUE)
             {
-              
-              
+
+
               if(output.device.type!="pdf"){
-                
+
                 temp_filename_1<-"Figures/Lineplots_aggregated_selectedfeats.png"
                # pdf(temp_filename_1)
                 png(temp_filename_1,width=plots.width,height=plots.height,res=plots.res,type=plots.type,units="in")
               }
-              
+
               par(mfrow=c(1,1),family="sans",cex=cex.plots)
               classlabels_orig<-read.table("../Stage2/classlabels_orig.txt",sep="\t",header=TRUE,stringsAsFactors = FALSE,check.names = FALSE, quote="")
               classlabels_orig<-classlabels_orig[,-c(1)]
-              
+
               #save(Xmat,classlabels_orig,lineplot.col.opt,col_vec,pairedanalysis,
               #     pca.cex.val,pca.ellipse,ellipse.conf.level,legendlocation,ylab_text,error.bar,
                #    cex.plots,lineplot.lty.option,timeseries.lineplots,analysistype,file="debuga_lineplots.Rda")
-              
+
               get_lineplots(X=Xmat,Y=classlabels_orig,feature_table_file=NA,parentoutput_dir=getwd(),
-                                class_labels_file=NA,lineplot.col.opt=lineplot.col.opt, 
+                                class_labels_file=NA,lineplot.col.opt=lineplot.col.opt,
                                 alphacol=0.3,col_vec=col_vec,pairedanalysis=pairedanalysis,
                                 point.cex.val=pca.cex.val,legendlocation=legendlocation,
                                 pca.ellipse=pca.ellipse,ellipse.conf.level=ellipse.conf.level,
@@ -1215,34 +1216,34 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
                                 lineplot.lty.option=lineplot.lty.option,timeseries.lineplots=timeseries.lineplots,
                                 study.design=analysistype,multiple.figures.perpanel = multiple.figures.perpanel) #,silent=TRUE)
             }
-            
+
             if(output.device.type!="pdf"){
-              
+
               try(dev.off(),silent=TRUE)
             }
           }
-          
-          
+
+
           if(output.device.type=="pdf"){
             try(dev.off(),silent=TRUE)
           }
         }
       }
-     
+
      # suppressWarnings(sink(file=NULL))
       suppressMessages(suppressWarnings(try(sink(file=NULL),silent=TRUE)))
-      
+
       #print("###############################")
       #print("###############################")
       #print("###############################")
       time_end<-Sys.time()
-      
+
       time_taken_panda<-round(time_end-time_start,2)
-      
-      
+
+
       #print("*********")
       cat(paste("**Program ended successfully in ",time_taken_panda," ",units(time_taken_panda),". Please see the ReadMe.txt file for description of output files and folders.**", sep=""),sep="\n")
-      
+
       #print("*********")
       #print(paste("All result files are in the specified output location: ",parentoutput_dir,sep=""))
       #print("*********")
@@ -1253,48 +1254,48 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
       # print("Enjoy!")
       #cat("",sep="\n")
      #cat("##############################END################################",sep="\n")
-      
-      
-      
-      
+
+
+
+
       s1<-"Stage 1 results: Includes raw (original) and preprocessed (filtered,normalized, and imputed) data tables"
       s2<-"Stage 2 results: Feature selection & evaluation results for each method. The following files and folders are generated for each method:: A) *selected.features.final.txt file includes final table of selected features; B) Figures subfolder: includes Manhattan plots, boxplots, HCA heatmap, and other figures, and C) Tables sub-folder: includes data files with feature selection results for all features, PCA (and PLS) scores and loadings, HCA clusters, k-fold CV results, and other tables.."
      # s3<-"Stage 3 results: Correlation based network analysis"
       #s4<-"Stage 4 results: Correlation based targeted network analysis"
       #s5<-"Consensus results: HCA, k-fold CV, boxplots, and barplots for aggregated selected features"
       sm<-rbind(s1,s2) #,s3,s4,s5)
-      
+
      # cat("Description of output folders:",sep="\n")
-      
-      
-      
-      
+
+
+
+
    #   cat(sm,sep="\n")
     #  cat("",sep="\n")
      # cat("##############################END################################",sep="\n")
-      
+
       #cat(sm,sep="\n")
       setwd(parentoutput_dir)
       write.table(sm,file="ReadMe.txt",sep="\t",row.names=FALSE)
       return(list("individual.featsel.res"=diffexp.res,"aggregated.res"=common_feats))
     }else{
-      
-     
+
+
      # suppressWarnings(sink(file=NULL))
       suppressMessages(suppressWarnings(try(sink(file=NULL),silent=TRUE)))
-      
+
       # print("###############################")
       #print("###############################")
       #print("###############################")
       time_end<-Sys.time()
-      
+
       time_taken_panda<-round(time_end-time_start,2)
-      
+
       cat(paste("**Program ended successfully in ",time_taken_panda," ",units(time_taken_panda),". Please see the ReadMe.txt file for description of output files and folders.**", sep=""),sep="\n")
-      
-      
+
+
       # print(paste("*******Program ended successfully in ",round(time_taken_panda,2)," minutes*******", sep=""))
-      
+
       #  print("*     *")
       #  print("Consensus analysis could not be performed as not all features were selected by all feature selection methods.")
       #print("*     *")
@@ -1302,43 +1303,43 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
       # print("*     *")
       #print("There will be a sub-folder for each step: Stage 1: pre-processing, Stage 2: statistical analysis (e.g. limma, PLS), and Stages 3 and 4: network analysis (Global and/or Targeted).")
       #  print("*     *")
-      
+
       #print("Please see the ReadMe.txt file for more information.")
       # print("*     *")
       # print("Enjoy!")
      # cat("",sep="\n")
      #cat("##############################END################################",sep="\n")
-      
-      
-      
+
+
+
       s1<-"Stage 1 results: Includes raw (original) and preprocessed (filtered,normalized, and imputed) data tables"
       s2<-"Stage 2 results: Feature selection & evaluation results for each method. The following files and folders are generated for each method:: A) *selected.features.final.txt file includes final table of selected features; B) Figures subfolder: includes Manhattan plots, boxplots, HCA heatmap, and other figures, and C) Tables sub-folder: includes data files with feature selection results for all features, PCA (and PLS) scores and loadings, HCA clusters, k-fold CV results, and other tables.."
       #s3<-"Stage 3 results: Correlation based network analysis"
       #s4<-"Stage 4 results: Correlation based targeted network analysis"
-      
+
       sm<-rbind(s1,s2)
      # cat(sm,sep="\n")
-      
+
     #  cat("Description of output folders:",sep="\n")
-      
-      
-     
-      
+
+
+
+
      # cat(sm,sep="\n")
       #cat("",sep="\n")
       #cat("##############################END################################",sep="\n")
-      
+
       setwd(parentoutput_dir)
       write.table(sm,file="ReadMe.txt",sep="\t",row.names=FALSE)
       options(warn=0)
       return(list("individual.featsel.res"=diffexp.res))
-      
+
     }
-    
-    
-    
+
+
+
   }else{
-    
+
    # suppressWarnings(
       diffexp.res<-diffexp.child(Xmat,Ymat,feature_table_file,parentoutput_dir,class_labels_file,num_replicates,feat.filt.thresh,summarize.replicates,summary.method,summary.na.replacement,missing.val,rep.max.missing.thresh,
                                  all.missing.thresh,group.missing.thresh,input.intensity.scale,
@@ -1346,7 +1347,7 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
                                  normalization.method,rsd.filt.list,
                                  pairedanalysis,featselmethod,fdrthresh,fdrmethod,cor.method,networktype,network.label.cex,abs.cor.thresh,cor.fdrthresh,kfold,pred.eval.method,feat_weight,globalcor,
                                  target.metab.file,target.mzmatch.diff,target.rtmatch.diff,max.cor.num,samplermindex,pcacenter,pcascale,
-                                 numtrees,analysismode,net_node_colors,net_legend,svm_kernel,heatmap.col.opt,manhattanplot.col.opt,boxplot.col.opt,barplot.col.opt,sample.col.opt,lineplot.col.opt,scatterplot.col.opt,hca_type,alphacol,pls_vip_thresh,num_nodes,max_varsel, 
+                                 numtrees,analysismode,net_node_colors,net_legend,svm_kernel,heatmap.col.opt,manhattanplot.col.opt,boxplot.col.opt,barplot.col.opt,sample.col.opt,lineplot.col.opt,scatterplot.col.opt,hca_type,alphacol,pls_vip_thresh,num_nodes,max_varsel,
                                  pls_ncomp,pca.stage2.eval,scoreplot_legend,pca.global.eval,rocfeatlist,rocfeatincrement,rocclassifier,foldchangethresh,wgcnarsdthresh,WGCNAmodules,
                                  optselect,max_comp_sel,saveRda,legendlocation,degree_rank_method,pca.cex.val,pca.ellipse,ellipse.conf.level,pls.permut.count,svm.acc.tolerance,limmadecideTests,pls.vip.selection,globalclustering,plots.res,plots.width,plots.height,
                                  plots.type,output.device.type,pvalue.thresh,individualsampleplot.col.opt,pamr.threshold.select.max,mars.gcv.thresh,error.bar,cex.plots,modeltype,barplot.xaxis,lineplot.lty.option,match_class_dist=match_class_dist,
@@ -1369,64 +1370,64 @@ function(Xmat=NA,Ymat=NA,feature_table_file,parentoutput_dir=NA,class_labels_fil
                                  vcovHC.type=vcovHC.type,ggplot.type1=ggplot.type1,facet.nrow=facet.nrow,
                                  pairwise.correlation.analysis=pairwise.correlation.analysis,generate.boxplots=generate.boxplots,pvalue.dist.plot=pvalue.dist.plot) #,silent=TRUE)
     #)
-    
+
     time_end<-Sys.time()
-    
+
     time_taken_panda<-round(time_end-time_start,2)
-    
-    
-   
+
+
+
     #suppressWarnings(sink(file=NULL))
     suppressMessages(suppressWarnings(try(sink(file=NULL),silent=TRUE)))
-    
+
     cat(paste("**Program ended successfully in ",time_taken_panda," ",units(time_taken_panda),". Please see the ReadMe.txt file for description of output files and folders.**", sep=""),sep="\n")
-    
+
     #     print("###############################")
     #print("###############################")
     #print("###############################")
     #print("*     *")
-    
+
     # print(paste("***Program ended successfully in ",round(time_taken_panda,2)," minutes***", sep=""))
     #  print(paste("*******Program ended successfully in ",round(time_taken_panda,2)," minutes*******", sep=""))
-    
+
     # print("*     *")
     #    print(paste("All result files are in the specified output location: ",parentoutput_dir,sep=""))
     # print("*     *")
     #   print("There will be a sub-folder for each step: Stage 1: pre-processing, Stage 2: statistical analysis (e.g. limma, PLS), and Stages 3 and 4: network analysis (Global and/or Targeted).")
     # print("*     *")
-    
+
     #   print("Please see the ReadMe.txt file for more information.")
     #   print("*     *")
     # print("Enjoy!")
     #cat("",sep="\n")
     #cat("##############################END################################",sep="\n")
-    
-    
+
+
     s1<-"Stage 1 results: Includes raw (original) and preprocessed (filtered,normalized, and imputed) data tables"
     s2<-"Stage 2 results: Feature selection & evaluation results for each method. The following files and folders are generated for each method:: A) *selected.features.final.txt file includes final table of selected features; B) Figures subfolder: includes Manhattan plots, boxplots, HCA heatmap, and other figures, and C) Tables sub-folder: includes data files with feature selection results for all features, PCA (and PLS) scores and loadings, HCA clusters, k-fold CV results, and other tables.."
     s3<-"Stage 3 results: Correlation based network analysis"
     s4<-"Stage 4 results: Correlation based targeted network analysis"
     sm<-rbind(s1,s2) #,s3,s4)
    # cat(sm,sep="\n")
-    
+
    # cat("Description of output folders:",sep="\n")
-    
-    
-    
+
+
+
     #s1<-"Stage 1 results: Includes raw (original) and preprocessed (filtered,normalized, and imputed) data tables"
     #s2<-"Stage 2 results: Feature selection & evaluation results for each method. The following files and folders are generated for each method:: A) *selected.features.final.txt file includes final table of selected features; B) Figures subfolder: includes Manhattan plots, boxplots, HCA heatmap, and other figures, and C) Tables sub-folder: includes data files with feature selection results for all features, PCA (and PLS) scores and loadings, HCA clusters, k-fold CV results, and other tables.."
-    
+
     #sm<-rbind(s1,s2)
-    
+
     #cat(sm,sep="\n")
    # cat("",sep="\n")
   #  cat("##############################END################################",sep="\n")
-    
+
     setwd(parentoutput_dir)
     write.table(sm,file="ReadMe.txt",sep="\t",row.names=FALSE)
     options(warn=0)
     return(diffexp.res)
-    
-    
+
+
   }
 }
