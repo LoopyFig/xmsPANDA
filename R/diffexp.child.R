@@ -391,7 +391,7 @@ function(Xmat,Ymat,feature_table_file,parentoutput_dir,class_labels_file,num_rep
   dir.create(parentoutput_dir1,showWarnings=FALSE)
 
   setwd(parentoutput_dir1)
-  if(all(is.na(Xmat[1]))==TRUE){
+  if(all(is.na(Xmat))==TRUE){
     X<-read.table(feature_table_file,sep="\t",header=TRUE,stringsAsFactors=FALSE,check.names=FALSE)
 
 
